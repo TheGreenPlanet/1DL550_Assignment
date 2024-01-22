@@ -30,5 +30,11 @@ $(TARGET): $(OBJECTS) $(MOCFILES)
 %.moc: %.h %.cpp
 	moc $(DEFINES) $(INCPATH) -i $< -o $@
 
+omp:
+	$(TARGET) -DOMP
+
+pd:
+	$(TARGET)
+
 clean:
 	-rm $(TARGET) $(OBJECTS) $(MOCFILES)
