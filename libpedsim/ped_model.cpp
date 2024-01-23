@@ -37,34 +37,39 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 void Ped::Model::tick()
 {
-	// EDIT HERE FOR ASSIGNMENT 1
-#ifdef OMP
-#pragma omp parallel for 
-	for (auto agent : this->getAgents()) {
-		agent->computeNextDesiredPosition();
-		agent->setX(agent->getDesiredX());
-		agent->setY(agent->getDesiredY());
+	if (this->implementation == IMPLEMENTATION::SEQ) {
+		for (auto agent : this->getAgents()) {
+			agent->computeNextDesiredPosition();
+			agent->setX(agent->getDesiredX());
+			agent->setY(agent->getDesiredY());
+		}
+	} else if (this->implementation == IMPLEMENTATION::OMP) {
+		#pragma omp parallel for 
+		for (auto agent : this->getAgents()) {
+			agent->computeNextDesiredPosition();
+			agent->setX(agent->getDesiredX());
+			agent->setY(agent->getDesiredY());
+		}
+	} else if (this->implementation == IMPLEMENTATION::VECTOR) { // TODO: vector ??
+		std::thread t1([](Ped::Model const *model) {
+			for (int i = 0; i < model->getAgents().size() / 2; i++) {
+				Ped::Tagent *agent = model->getAgents()[i];
+				agent->computeNextDesiredPosition();
+				agent->setX(agent->getDesiredX());
+				agent->setY(agent->getDesiredY());
+			}
+		}, this);
+		std::thread t2([](Ped::Model const *model) {
+			for (int i = model->getAgents().size() / 2; i < model->getAgents().size(); i++) {
+				Ped::Tagent *agent = model->getAgents()[i];
+				agent->computeNextDesiredPosition();
+				agent->setX(agent->getDesiredX());
+				agent->setY(agent->getDesiredY());
+			}
+		}, this);
+		t1.join();
+		t2.join();
 	}
-#else
-	std::thread t1([](Ped::Model const *model) {
-		for (int i = 0; i < model->getAgents().size() / 2; i++) {
-			Ped::Tagent *agent = model->getAgents()[i];
-			agent->computeNextDesiredPosition();
-			agent->setX(agent->getDesiredX());
-			agent->setY(agent->getDesiredY());
-		}
-	}, this);
-	std::thread t2([](Ped::Model const *model) {
-		for (int i = model->getAgents().size() / 2; i < model->getAgents().size(); i++) {
-			Ped::Tagent *agent = model->getAgents()[i];
-			agent->computeNextDesiredPosition();
-			agent->setX(agent->getDesiredX());
-			agent->setY(agent->getDesiredY());
-		}
-	}, this);
-	t1.join();
-	t2.join();
-#endif
 }
 
 ////////////

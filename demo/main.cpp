@@ -33,6 +33,7 @@ int main(int argc, char*argv[]) {
 	bool timing_mode = 0;
 	int i = 1;
 	QString scenefile = "scenario.xml";
+	Ped::IMPLEMENTATION implementation_to_test = Ped::OMP;
 
 	// Argument handling
 	while (i < argc)
@@ -49,6 +50,19 @@ int main(int argc, char*argv[]) {
 				cout << "Usage: " << argv[0] << " [--help] [--timing-mode] [scenario]" << endl;
 				return 0;
 			}
+			else if (strcmp(&argv[i][2], "seq") == 0)
+			{
+				implementation_to_test = Ped::SEQ;
+			}
+			else if (strcmp(&argv[i][2], "omp") == 0)
+			{
+				implementation_to_test = Ped::OMP;
+			}
+			else if (strcmp(&argv[i][2], "vector") == 0)
+			{
+				implementation_to_test = Ped::VECTOR;
+			}
+			// TODO: add all implementations
 			else
 			{
 				cerr << "Unrecognized command: \"" << argv[i] << "\". Ignoring ..." << endl;
@@ -61,13 +75,26 @@ int main(int argc, char*argv[]) {
 
 		i += 1;
 	}
+
+	switch (implementation_to_test) {
+		case Ped::SEQ:
+			cout << "Testing SEQ implementation" << endl;
+			break;
+		case Ped::OMP:
+			cout << "Testing OMP implementation" << endl;
+			break;
+		case Ped::VECTOR:
+			cout << "Testing VECTOR implementation" << endl;
+			break;
+	}
+
 	int retval = 0;
 	{ // This scope is for the purpose of removing false memory leak positives
 
 		// Reading the scenario file and setting up the crowd simulation model
 		Ped::Model model;
 		ParseScenario parser(scenefile);
-		model.setup(parser.getAgents(), parser.getWaypoints(), Ped::SEQ);
+		model.setup(parser.getAgents(), parser.getWaypoints(), implementation_to_test);
 
 		// Default number of steps to simulate. Feel free to change this.
 		const int maxNumberOfStepsToSimulate = 100000;
@@ -97,9 +124,6 @@ int main(int argc, char*argv[]) {
 				cout << "Reference time: " << duration_seq.count() << " milliseconds, " << fps_seq << " Frames Per Second." << std::endl;
 			}
 
-			// Change this variable when testing different versions of your code. 
-			// May need modification or extension in later assignments depending on your implementations
-			Ped::IMPLEMENTATION implementation_to_test = Ped::SEQ;
 			{
 				Ped::Model model;
 				ParseScenario parser(scenefile);
