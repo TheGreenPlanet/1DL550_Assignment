@@ -14,7 +14,6 @@
 #include "cuda_testkernel.h"
 #include <omp.h>
 #include <thread>
-
 #include <stdlib.h>
 
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
@@ -44,31 +43,33 @@ void Ped::Model::tick()
 			agent->setY(agent->getDesiredY());
 		}
 	} else if (this->implementation == IMPLEMENTATION::OMP) {
-		#pragma omp parallel for 
+		//omp_set_num_threads(8);
+		#pragma omp parallel for default (none)
 		for (auto agent : this->getAgents()) {
 			agent->computeNextDesiredPosition();
 			agent->setX(agent->getDesiredX());
 			agent->setY(agent->getDesiredY());
 		}
-	} else if (this->implementation == IMPLEMENTATION::VECTOR) { // TODO: vector ??
-		std::thread t1([](Ped::Model const *model) {
-			for (int i = 0; i < model->getAgents().size() / 2; i++) {
-				Ped::Tagent *agent = model->getAgents()[i];
-				agent->computeNextDesiredPosition();
-				agent->setX(agent->getDesiredX());
-				agent->setY(agent->getDesiredY());
-			}
-		}, this);
-		std::thread t2([](Ped::Model const *model) {
-			for (int i = model->getAgents().size() / 2; i < model->getAgents().size(); i++) {
-				Ped::Tagent *agent = model->getAgents()[i];
-				agent->computeNextDesiredPosition();
-				agent->setX(agent->getDesiredX());
-				agent->setY(agent->getDesiredY());
-			}
-		}, this);
-		t1.join();
-		t2.join();
+	} else if (this->implementation == IMPLEMENTATION::PTHREAD) {
+		int numThreads = 4;
+		std::vector<std::thread> threads(numThreads);
+		
+		for (int t = 0; t < numThreads; t++) {
+			threads[t] = std::thread([t, numThreads](Ped::Model const *model) {
+				int start = (model->getAgents().size() * t) / numThreads;
+				int end = (model->getAgents().size() * (t + 1)) / numThreads;
+
+				for (int i = start; i < end; i++) {
+					Ped::Tagent *agent = model->getAgents()[i];
+					agent->computeNextDesiredPosition();
+					agent->setX(agent->getDesiredX());
+					agent->setY(agent->getDesiredY());
+				} }, this);
+		}
+
+		for (auto &thread : threads) {
+			thread.join();
+		}
 	}
 }
 

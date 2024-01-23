@@ -33,7 +33,7 @@ int main(int argc, char*argv[]) {
 	bool timing_mode = 0;
 	int i = 1;
 	QString scenefile = "scenario.xml";
-	Ped::IMPLEMENTATION implementation_to_test = Ped::OMP;
+	Ped::IMPLEMENTATION implementation_to_test = Ped::SEQ;
 
 	// Argument handling
 	while (i < argc)
@@ -58,9 +58,9 @@ int main(int argc, char*argv[]) {
 			{
 				implementation_to_test = Ped::OMP;
 			}
-			else if (strcmp(&argv[i][2], "vector") == 0)
+			else if (strcmp(&argv[i][2], "pthread") == 0)
 			{
-				implementation_to_test = Ped::VECTOR;
+				implementation_to_test = Ped::PTHREAD;
 			}
 			// TODO: add all implementations
 			else
@@ -83,8 +83,8 @@ int main(int argc, char*argv[]) {
 		case Ped::OMP:
 			cout << "Testing OMP implementation" << endl;
 			break;
-		case Ped::VECTOR:
-			cout << "Testing VECTOR implementation" << endl;
+		case Ped::PTHREAD:
+			cout << "Testing PTHREAD implementation" << endl;
 			break;
 	}
 
