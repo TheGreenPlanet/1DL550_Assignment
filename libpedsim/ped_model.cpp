@@ -36,6 +36,7 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 void Ped::Model::tick()
 {
+constexpr uint32_t SIMD_AGENTS_PER_TICK = 4;
 	if (this->implementation == IMPLEMENTATION::SEQ) {
 		for (auto agent : this->getAgents()) {
 			agent->computeNextDesiredPosition();
@@ -69,6 +70,11 @@ void Ped::Model::tick()
 
 		for (auto &thread : threads) {
 			thread.join();
+		}
+	} else if (this->implementation == IMPLEMENTATION::VECTOR) {
+		for (auto i = 0u; i < this->getAgents().size(); i += SIMD_AGENTS_PER_TICK)
+		{
+			
 		}
 	}
 }

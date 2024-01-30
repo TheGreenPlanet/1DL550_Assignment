@@ -22,6 +22,7 @@
 using namespace std;
 
 namespace Ped {
+
 	class Twaypoint;
 
 	class Tagent {
