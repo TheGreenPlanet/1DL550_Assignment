@@ -12,9 +12,7 @@
 // Note: the agent will not move by itself, but the movement
 // is handled in ped_model.cpp. 
 //
-
-#ifndef _ped_agent_h_
-#define _ped_agent_h_ 1
+#pragma once
 
 #include <vector>
 #include <deque>
@@ -49,6 +47,8 @@ namespace Ped {
 		// Adds a new waypoint to reach for this agent
 		void addWaypoint(Twaypoint* wp);
 
+		// Returns the next destination to visit
+		Twaypoint* getNextDestination();
 	private:
 		Tagent() {};
 
@@ -71,10 +71,5 @@ namespace Ped {
 
 		// Internal init function 
 		void init(int posX, int posY);
-
-		// Returns the next destination to visit
-		Twaypoint* getNextDestination();
 	};
 }
-
-#endif

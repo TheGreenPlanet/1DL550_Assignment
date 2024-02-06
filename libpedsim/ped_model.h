@@ -14,8 +14,10 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <memory>
 
 #include "ped_agent.h"
+#include "ped_agent_simd.h"
 
 namespace Ped{
 	class Tagent;
@@ -57,6 +59,9 @@ namespace Ped{
 
 		// The agents in this scenario
 		std::vector<Tagent*> agents;
+
+		// TagentSimd *agentsSimd;
+		std::unique_ptr<Ped::TagentSimd> agentsSimd;
 
 		// The waypoints in this scenario
 		std::vector<Twaypoint*> destinations;

@@ -62,6 +62,10 @@ int main(int argc, char*argv[]) {
 			{
 				implementation_to_test = Ped::PTHREAD;
 			}
+			else if (strcmp(&argv[i][2], "vector") == 0)
+			{
+				implementation_to_test = Ped::VECTOR;
+			}
 			// TODO: add all implementations
 			else
 			{
@@ -85,6 +89,9 @@ int main(int argc, char*argv[]) {
 			break;
 		case Ped::PTHREAD:
 			cout << "Testing PTHREAD implementation" << endl;
+			break;
+		case Ped::VECTOR:
+			cout << "Testing VECTOR implementation" << endl;
 			break;
 	}
 
