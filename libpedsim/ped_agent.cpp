@@ -25,7 +25,7 @@ Ped::Tagent::Tagent(double posX, double posY) {
 
 void Ped::Tagent::init(int posX, int posY) {
 	// print the position of the agent
-	std::cout << "Agent created at position " << posX << ", " << posY << std::endl;
+	//std::cout << "Agent created at position " << posX << ", " << posY << std::endl;
 	x = posX;
 	y = posY;
 	destination = NULL;

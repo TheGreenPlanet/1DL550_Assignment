@@ -47,11 +47,26 @@ namespace Ped {
 	void Model::tick()
 	{
 		if (this->implementation == IMPLEMENTATION::SEQ) {
-			for (auto agent : this->getAgents()) {
-				agent->computeNextDesiredPosition();
-				agent->setX(agent->getDesiredX());
-				agent->setY(agent->getDesiredY());
+			for (auto i = 0u; i < agents.size(); i++) {
+				agents[i]->computeNextDesiredPosition();
+				if (i == 0) {
+					std::cout << "Agent 0: " << agents[i]->getX() << ", " << agents[i]->getY() << std::endl;
+					auto desiredX = agents[i]->getDesiredX();
+					auto desiredY = agents[i]->getDesiredY();
+					std::cout << "Desired: " << desiredX << ", " << desiredY << std::endl;
+
+					agents[i]->setX(desiredX);
+					agents[i]->setY(desiredY);
+				} else {
+					agents[i]->setX(agents[i]->getDesiredX());
+					agents[i]->setY(agents[i]->getDesiredY());
+				}
 			}
+			// for (auto agent : this->getAgents()) {
+			// 	agent->computeNextDesiredPosition();
+			// 	agent->setX(agent->getDesiredX());
+			// 	agent->setY(agent->getDesiredY());
+			// }
 		} else if (this->implementation == IMPLEMENTATION::OMP) {
 			//omp_set_num_threads(8);
 			#pragma omp parallel for default (none)
@@ -125,18 +140,42 @@ namespace Ped {
 			// for the last data vector this might perform some unnecessary calculations
 			// but this doesn't affect the actual program since we only extract all valid agents in the loop below this one
 			for (auto i = 0u; i < simdListSize; i++) {
-				__m128i x = agentsSimd->x.at(i);
-				__m128i y = agentsSimd->y.at(i);
-				__m256d nextDestinationX = nextDestinationsX[i];
-				__m256d nextDestinationY = nextDestinationsY[i];
+				const __m128i x = agentsSimd->x.at(i);
+				const __m128i y = agentsSimd->y.at(i);
+				const __m256d nextDestinationX = nextDestinationsX[i];
+				const __m256d nextDestinationY = nextDestinationsY[i];
 
+				const __m256d xAsDouble = _mm256_cvtepi32_pd(x);
+				const __m256d yAsDouble = _mm256_cvtepi32_pd(y);
+				
 				// Compute the next desired position
-				__m256d diffX = _mm256_sub_pd(nextDestinationX, _mm256_cvtepi32_pd(x));
-				__m256d diffY = _mm256_sub_pd(nextDestinationY, _mm256_cvtepi32_pd(y));
-				__m256d len = _mm256_sqrt_pd(_mm256_add_pd(_mm256_mul_pd(diffX, diffX), _mm256_mul_pd(diffY, diffY)));
+				const __m256d diffX = _mm256_sub_pd(nextDestinationX, xAsDouble);
+				const __m256d diffY = _mm256_sub_pd(nextDestinationY, yAsDouble);
 
-				__m128i desiredPositionXNew = _mm256_cvttpd_epi32(_mm256_add_pd(_mm256_cvtepi32_pd(x), _mm256_div_pd(diffX, len)));
-				__m128i desiredPositionYNew = _mm256_cvttpd_epi32(_mm256_add_pd(_mm256_cvtepi32_pd(y), _mm256_div_pd(diffY, len)));
+				const __m256d squareX = _mm256_mul_pd(diffX, diffX);
+				const __m256d squareY = _mm256_mul_pd(diffY, diffY);
+				const __m256d add_pd = _mm256_add_pd(squareX, squareY);
+
+				const __m256d len = _mm256_sqrt_pd(add_pd);
+
+				const __m256d half = _mm256_set1_pd(0.5);
+
+				const __m256d divX = _mm256_div_pd(diffX, len);
+				const __m256d add1 = _mm256_add_pd(xAsDouble, divX);
+				// add 0.5 to add1 before rounding it achieve the same behavior as round from <cmath>
+				const __m256d add1_adjusted = _mm256_add_pd(add1, half);
+				const __m128i desiredPositionXNew = _mm256_cvttpd_epi32(add1_adjusted);
+
+				const __m256d divY = _mm256_div_pd(diffY, len);
+				const __m256d add2 = _mm256_add_pd(yAsDouble, divY);
+				const __m256d add2_adjusted = _mm256_add_pd(add2, half);
+				const __m128i desiredPositionYNew = _mm256_cvttpd_epi32(add2_adjusted);
+
+
+				if (i == 0) {
+					std::cout << "Desired position x: " << _mm_extract_epi32(desiredPositionXNew, 0) << std::endl;
+					std::cout << "Desired position y: " << _mm_extract_epi32(desiredPositionYNew, 0) << std::endl;
+				}
 
 				// std::cout << "Desired position x: " << _mm_extract_epi32(desiredPositionXNew, 0) << std::endl;
 				// std::cout << "Desired position y: " << _mm_extract_epi32(desiredPositionYNew, 0) << std::endl;
