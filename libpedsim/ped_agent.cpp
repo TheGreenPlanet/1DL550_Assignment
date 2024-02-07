@@ -7,10 +7,12 @@
 //
 #include "ped_agent.h"
 #include "ped_waypoint.h"
+#include <iostream>
 #include <math.h>
 #include <memory>
 
 
+#include <ostream>
 #include <stdlib.h>
 
 Ped::Tagent::Tagent(int posX, int posY) {
@@ -22,6 +24,8 @@ Ped::Tagent::Tagent(double posX, double posY) {
 }
 
 void Ped::Tagent::init(int posX, int posY) {
+	// print the position of the agent
+	std::cout << "Agent created at position " << posX << ", " << posY << std::endl;
 	x = posX;
 	y = posY;
 	destination = NULL;

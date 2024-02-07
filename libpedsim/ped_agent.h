@@ -14,6 +14,8 @@
 //
 #pragma once
 
+#include <iostream>
+#include <ostream>
 #include <vector>
 #include <deque>
 
@@ -33,8 +35,14 @@ namespace Ped {
 		int getDesiredY() const { return desiredPositionY; }
 
 		// Sets the agent's position
-		void setX(int newX) { x = newX; }
-		void setY(int newY) { y = newY; }
+		void setX(int newX) {
+			//std::cout << "Setting x to " << newX << std::endl;
+			x = newX;
+		}
+		void setY(int newY) {
+			//std::cout << "Setting y to " << newY << std::endl;
+			y = newY;
+		}
 
 		// Update the position according to get closer
 		// to the current destination

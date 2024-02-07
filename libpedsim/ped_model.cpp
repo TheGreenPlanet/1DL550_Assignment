@@ -81,52 +81,52 @@ namespace Ped {
 				thread.join();
 			}
 		} else if (this->implementation == IMPLEMENTATION::VECTOR) {
-			std::vector<__m256d> nextDestinationsX;
-			std::vector<__m256d> nextDestinationsY;
-			for (auto i = 0u; i < this->getAgents().size(); i += SIMD_AGENTS_PER_TICK) {
-				
+			auto totalAgents = this->getAgents().size();
+			auto totalSize = (totalAgents + SIMD_AGENTS_PER_TICK - 1) / SIMD_AGENTS_PER_TICK; // Calculate needed size, rounded up
+
+			__m256d* nextDestinationsX = (__m256d*)_mm_malloc(totalSize * sizeof(__m256d), 32);
+			__m256d* nextDestinationsY = (__m256d*)_mm_malloc(totalSize * sizeof(__m256d), 32);
+
+			for (auto i = 0u; i < totalAgents; i += SIMD_AGENTS_PER_TICK) {
 				auto lambda = [&](Twaypoint *waypoint, int agentIdx) -> std::pair<double, double> {
-					if (waypoint == NULL) {
-constexpr double SOME_BIG_NUMBER_THAT_DOESNT_OVERFLOW = cbrt(std::numeric_limits<double>::max());
-						return std::pair<double, double>(SOME_BIG_NUMBER_THAT_DOESNT_OVERFLOW, SOME_BIG_NUMBER_THAT_DOESNT_OVERFLOW);	
-					}
-					
-					return std::pair<double, double>(waypoint->getx(), waypoint->gety()); 
+						if (waypoint == NULL) {
+								//std::cout << "Agent " << agentIdx << " has no destination" << std::endl;
+								constexpr double SOME_BIG_NUMBER_THAT_DOESNT_OVERFLOW = cbrt(std::numeric_limits<double>::max());
+								return {SOME_BIG_NUMBER_THAT_DOESNT_OVERFLOW, SOME_BIG_NUMBER_THAT_DOESNT_OVERFLOW};    
+						}
+						//std::cout << "Agent " << agentIdx << " has destination, x = " << waypoint->getx() << ", y = " << waypoint->gety() << std::endl;
+						return {waypoint->getx(), waypoint->gety()};
 				};
 
-				double dataX[4] = {
-					lambda(agents[i]->getNextDestination(), i).first,
-					lambda(agents[i+1]->getNextDestination(), i+1).first,
-					lambda(agents[i+2]->getNextDestination(), i+2).first,
-					lambda(agents[i+3]->getNextDestination(), i+3).first
-				};
-				double dataY[4] = {
-					lambda(agents[i]->getNextDestination(), i).second,
-					lambda(agents[i+1]->getNextDestination(), i+1).second,
-					lambda(agents[i+2]->getNextDestination(), i+2).second,
-					lambda(agents[i+3]->getNextDestination(), i+3).second
-				};
+				double dataX[4] = {0.0, 0.0, 0.0, 0.0};
+				double dataY[4] = {0.0, 0.0, 0.0, 0.0};
 				
+				for (int j = 0; j < SIMD_AGENTS_PER_TICK; ++j) {
+						if (i + j >= totalAgents) {
+								break;
+						}
+						auto result = lambda(agents[i+j]->getNextDestination(), i+j);
+						dataX[j] = result.first;
+						dataY[j] = result.second;
+				}
+
 				__m256d fourNextDestinationsX = _mm256_loadu_pd(dataX);
 				__m256d fourNextDestinationsY = _mm256_loadu_pd(dataY);
 				
-				nextDestinationsX.push_back(fourNextDestinationsX);
-				nextDestinationsY.push_back(fourNextDestinationsY);
+				nextDestinationsX[i / SIMD_AGENTS_PER_TICK] = fourNextDestinationsX;
+				nextDestinationsY[i / SIMD_AGENTS_PER_TICK] = fourNextDestinationsY;
 			}
 
 			assert(agentsSimd->x.size() == agentsSimd->y.size());
 			assert(agentsSimd->x.size() == agentsSimd->desiredPositionX.size());
 			assert(agentsSimd->x.size() == agentsSimd->desiredPositionY.size());
-			// Guarantee that the agent list and the destination list is the same size
-			assert(agentsSimd->x.size() == nextDestinationsX.size());
-			assert(agentsSimd->x.size() == nextDestinationsY.size());
 
 			const auto simdListSize = agentsSimd->x.size();
+			// for the last data vector this might perform some unnecessary calculations
+			// but this doesn't affect the actual program since we only extract all valid agents in the loop below this one
 			for (auto i = 0u; i < simdListSize; i++) {
-				__m128i x = agentsSimd->x[i];
-				__m128i y = agentsSimd->y[i];
-				__m128i desiredPositionX = agentsSimd->desiredPositionX[i];
-				__m128i desiredPositionY = agentsSimd->desiredPositionY[i];
+				__m128i x = agentsSimd->x.at(i);
+				__m128i y = agentsSimd->y.at(i);
 				__m256d nextDestinationX = nextDestinationsX[i];
 				__m256d nextDestinationY = nextDestinationsY[i];
 
@@ -137,17 +137,42 @@ constexpr double SOME_BIG_NUMBER_THAT_DOESNT_OVERFLOW = cbrt(std::numeric_limits
 
 				__m128i desiredPositionXNew = _mm256_cvttpd_epi32(_mm256_add_pd(_mm256_cvtepi32_pd(x), _mm256_div_pd(diffX, len)));
 				__m128i desiredPositionYNew = _mm256_cvttpd_epi32(_mm256_add_pd(_mm256_cvtepi32_pd(y), _mm256_div_pd(diffY, len)));
+
+				// std::cout << "Desired position x: " << _mm_extract_epi32(desiredPositionXNew, 0) << std::endl;
+				// std::cout << "Desired position y: " << _mm_extract_epi32(desiredPositionYNew, 0) << std::endl;
+
+				// set the desired position
+				agentsSimd->desiredPositionX[i] = desiredPositionXNew;
+				agentsSimd->desiredPositionY[i] = desiredPositionYNew;
+
+				// set x and y
+				agentsSimd->x[i] = desiredPositionXNew;
+				agentsSimd->y[i] = desiredPositionYNew;
+
 			}
 
 			// Set the agents' position
 			for (auto i = 0u; i < simdListSize; i++) {
-				agents[i * SIMD_AGENTS_PER_TICK]->setX(_mm_extract_epi32(agentsSimd->desiredPositionX[i], 0));
-				agents[i * SIMD_AGENTS_PER_TICK + 1]->setX(_mm_extract_epi32(agentsSimd->desiredPositionX[i], 1));
-				agents[i * SIMD_AGENTS_PER_TICK + 2]->setX(_mm_extract_epi32(agentsSimd->desiredPositionX[i], 2));
-				agents[i * SIMD_AGENTS_PER_TICK + 3]->setX(_mm_extract_epi32(agentsSimd->desiredPositionX[i], 3));
+				if (i * SIMD_AGENTS_PER_TICK < totalAgents) {
+					agents[i * SIMD_AGENTS_PER_TICK]->setX(_mm_extract_epi32(agentsSimd->desiredPositionX[i], 0));
+					agents[i * SIMD_AGENTS_PER_TICK]->setY(_mm_extract_epi32(agentsSimd->desiredPositionY[i], 0));
+				}
+				if ((i * SIMD_AGENTS_PER_TICK + 1) < totalAgents) {
+					agents[i * SIMD_AGENTS_PER_TICK + 1]->setX(_mm_extract_epi32(agentsSimd->desiredPositionX[i], 1));
+					agents[i * SIMD_AGENTS_PER_TICK + 1]->setY(_mm_extract_epi32(agentsSimd->desiredPositionY[i], 1));
+				}
+				if ((i * SIMD_AGENTS_PER_TICK + 2) < totalAgents) {
+					agents[i * SIMD_AGENTS_PER_TICK + 2]->setX(_mm_extract_epi32(agentsSimd->desiredPositionX[i], 2));
+					agents[i * SIMD_AGENTS_PER_TICK + 2]->setY(_mm_extract_epi32(agentsSimd->desiredPositionY[i], 2));
+				}
+				if ((i * SIMD_AGENTS_PER_TICK + 3) < totalAgents) {
+					agents[i * SIMD_AGENTS_PER_TICK + 3]->setX(_mm_extract_epi32(agentsSimd->desiredPositionX[i], 3));
+					agents[i * SIMD_AGENTS_PER_TICK + 3]->setY(_mm_extract_epi32(agentsSimd->desiredPositionY[i], 3));
+				}
 			}
+			_mm_free(nextDestinationsX);
+			_mm_free(nextDestinationsY);
 		}
-
 	}
 
 	////////////
