@@ -1,8 +1,11 @@
 #include "ped_agent_simd.h"
 
-
 namespace Ped {
     TagentSimd::TagentSimd(std::vector<Tagent*> agentsInScenario, const uint32_t instructionsPerTick) {
+		const auto totalSize = (agentsInScenario.size() + instructionsPerTick - 1) / instructionsPerTick; // Calculate needed size, rounded up
+		this->nextDestinationsX = (__m256d*)_mm_malloc(totalSize * sizeof(__m256d), 32);
+		this->nextDestinationsY = (__m256d*)_mm_malloc(totalSize * sizeof(__m256d), 32);
+
         // for every 4th agent, initilize a data vector __m128i and push it to the list.
         for (auto i = 0u; i < agentsInScenario.size(); i += instructionsPerTick) {
             __m128i x = _mm_setzero_si128();
@@ -41,5 +44,9 @@ namespace Ped {
             this->desiredPositionX.push_back(desiredPositionX);
             this->desiredPositionY.push_back(desiredPositionY);
         }
+    }
+    TagentSimd::~TagentSimd() {
+        _mm_free(this->nextDestinationsX);
+        _mm_free(this->nextDestinationsY);
     }
 };

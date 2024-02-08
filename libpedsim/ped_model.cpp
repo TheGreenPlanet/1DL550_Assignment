@@ -82,10 +82,6 @@ namespace Ped {
 			}
 		} else if (this->implementation == IMPLEMENTATION::VECTOR) {
 			auto totalAgents = this->getAgents().size();
-			const auto totalSize = (totalAgents + SIMD_AGENTS_PER_TICK - 1) / SIMD_AGENTS_PER_TICK; // Calculate needed size, rounded up
-
-			__m256d* nextDestinationsX = (__m256d*)_mm_malloc(totalSize * sizeof(__m256d), 32);
-			__m256d* nextDestinationsY = (__m256d*)_mm_malloc(totalSize * sizeof(__m256d), 32);
 
 			for (auto i = 0u; i < totalAgents; i += SIMD_AGENTS_PER_TICK) {
 				double dataX[4] = {-1, -1, -1, -1};
@@ -106,8 +102,8 @@ namespace Ped {
 				__m256d fourNextDestinationsX = _mm256_loadu_pd(dataX);
 				__m256d fourNextDestinationsY = _mm256_loadu_pd(dataY);
 				
-				nextDestinationsX[i / SIMD_AGENTS_PER_TICK] = fourNextDestinationsX;
-				nextDestinationsY[i / SIMD_AGENTS_PER_TICK] = fourNextDestinationsY;
+				this->agentsSimd->nextDestinationsX[i / SIMD_AGENTS_PER_TICK] = fourNextDestinationsX;
+				this->agentsSimd->nextDestinationsY[i / SIMD_AGENTS_PER_TICK] = fourNextDestinationsY;
 			}
 
 			assert(agentsSimd->x.size() == agentsSimd->y.size());
@@ -122,8 +118,8 @@ namespace Ped {
 				// 1. store the results
 				const __m128i x = agentsSimd->x.at(i);
 				const __m128i y = agentsSimd->y.at(i);
-				const __m256d nextDestinationX = nextDestinationsX[i];
-				const __m256d nextDestinationY = nextDestinationsY[i];
+				const __m256d nextDestinationX = this->agentsSimd->nextDestinationsX[i];
+				const __m256d nextDestinationY = this->agentsSimd->nextDestinationsY[i];
 
 				const __m256d xAsDouble = _mm256_cvtepi32_pd(x);
 				const __m256d yAsDouble = _mm256_cvtepi32_pd(y);
@@ -156,7 +152,7 @@ namespace Ped {
 
 				const __m256d add2_rounded = _mm256_round_pd(add2, _MM_FROUND_TO_NEAREST_INT);
 
-				// Step 4: Use the mask to blend: choose 'input' where mask is false (i.e., where input is -1), and 'squared' otherwise.
+				// Step 4: Use the mask to blend: choose 'nextDestinationX' or 'nextDestinationY' where mask is false (i.e., where the value is -1), and 'add1_rounded' or 'add2_rounded' otherwise.
 				__m256d roundedXForValidAgents = _mm256_blendv_pd(nextDestinationX, add1_rounded, mask_not_neg_one);
 				__m256d roundedYForValidAgents = _mm256_blendv_pd(nextDestinationY, add2_rounded, mask_not_neg_one);
 
@@ -196,8 +192,6 @@ namespace Ped {
 					agents[i * SIMD_AGENTS_PER_TICK + 3]->setY(_mm_extract_epi32(agentsSimd->desiredPositionY[i], 3));
 				}
 			}
-			_mm_free(nextDestinationsX);
-			_mm_free(nextDestinationsY);
 		}
 	}
 

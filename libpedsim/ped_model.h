@@ -32,7 +32,6 @@ namespace Ped{
 
 		// Sets everything up
 		void setup(std::vector<Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario,IMPLEMENTATION implementation);
-		
 		// Coordinates a time step in the scenario: move all agents by one step (if applicable).
 		void tick();
 
@@ -51,6 +50,7 @@ namespace Ped{
 		int getHeatmapSize() const;
 
 	private:
+
 
 		// Denotes which implementation (sequential, parallel implementations..)
 		// should be used for calculating the desired positions of
