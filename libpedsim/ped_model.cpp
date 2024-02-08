@@ -97,27 +97,24 @@ namespace Ped {
 			}
 		} else if (this->implementation == IMPLEMENTATION::VECTOR) {
 			auto totalAgents = this->getAgents().size();
-			auto totalSize = (totalAgents + SIMD_AGENTS_PER_TICK - 1) / SIMD_AGENTS_PER_TICK; // Calculate needed size, rounded up
+			const auto totalSize = (totalAgents + SIMD_AGENTS_PER_TICK - 1) / SIMD_AGENTS_PER_TICK; // Calculate needed size, rounded up
 
 			__m256d* nextDestinationsX = (__m256d*)_mm_malloc(totalSize * sizeof(__m256d), 32);
 			__m256d* nextDestinationsY = (__m256d*)_mm_malloc(totalSize * sizeof(__m256d), 32);
 
 			for (auto i = 0u; i < totalAgents; i += SIMD_AGENTS_PER_TICK) {
-				double dataX[4] = {0.0, 0.0, 0.0, 0.0};
-				double dataY[4] = {0.0, 0.0, 0.0, 0.0};
+				double dataX[4] = {-1, -1, -1, -1};
+				double dataY[4] = {-1, -1, -1, -1};
 				
 				for (int j = 0; j < SIMD_AGENTS_PER_TICK; ++j) {
-						if (i + j >= totalAgents) {
-							break;
-						}
-						auto waypoint = agents[i+j]->getNextDestination();
-						if (waypoint) {
-							dataX[j] = waypoint->getx();
-							dataY[j] = waypoint->gety();							
-						} else {
-							dataX[j] = -1;
-							dataY[j] = -1;
-						}
+					if (i + j >= totalAgents) {
+						break;
+					}
+					auto waypoint = agents[i+j]->getNextDestination();
+					if (waypoint) {
+						dataX[j] = waypoint->getx();
+						dataY[j] = waypoint->gety();							
+					}
 				}
 
 				__m256d fourNextDestinationsX = _mm256_loadu_pd(dataX);
@@ -136,6 +133,7 @@ namespace Ped {
 			// but this doesn't affect the actual program since we only extract all valid agents in the loop below this one
 			for (auto i = 0u; i < simdListSize; i++) {
 
+				// 1. store the results
 				const __m128i x = agentsSimd->x.at(i);
 				const __m128i y = agentsSimd->y.at(i);
 				const __m256d nextDestinationX = nextDestinationsX[i];
@@ -143,7 +141,14 @@ namespace Ped {
 
 				const __m256d xAsDouble = _mm256_cvtepi32_pd(x);
 				const __m256d yAsDouble = _mm256_cvtepi32_pd(y);
+
+				// Step 2: Create a mask for values that are NOT -1.
+				// _CMP_NEQ_OQ means "not equal to", considering quiet NaNs.
+				// we assume that the "index" in the vector for -1 is the same for both nextDestinationX and yAsDouble
+				// hence, only one mask calculation is needed and applied
+				const __m256d mask_not_neg_one = _mm256_cmp_pd(nextDestinationX, _mm256_set1_pd(-1.0), _CMP_NEQ_OQ);
 				
+				// Step 3: Calculate the square of all elements.
 				// Compute the next desired position
 				const __m256d diffX = _mm256_sub_pd(nextDestinationX, xAsDouble);
 				const __m256d diffY = _mm256_sub_pd(nextDestinationY, yAsDouble);
@@ -158,15 +163,26 @@ namespace Ped {
 
 				const __m256d divX = _mm256_div_pd(diffX, len);
 				const __m256d add1 = _mm256_add_pd(xAsDouble, divX);
-				// add 0.5 to add1 before rounding it achieve the same behavior as round from <cmath>
-				const __m256d add1_adjusted = _mm256_add_pd(add1, half);
-				const __m128i desiredPositionXNew = _mm256_cvttpd_epi32(add1_adjusted);
+				// round like round
+				const __m256d add1_rounded = __mm256_round_pd(add1, _MM_FROUND_TO_NEAREST_INT);
 
 				const __m256d divY = _mm256_div_pd(diffY, len);
 				const __m256d add2 = _mm256_add_pd(yAsDouble, divY);
-				const __m256d add2_adjusted = _mm256_add_pd(add2, half);
-				const __m128i desiredPositionYNew = _mm256_cvttpd_epi32(add2_adjusted);
 
+				const __m256d add2_rounded = __mm256_round_pd(add2, _MM_FROUND_TO_NEAREST_INT);
+
+				// Step 4: Use the mask to blend: choose 'input' where mask is false (i.e., where input is -1), and 'squared' otherwise.
+				__m256d roundedXForValidAgents = _mm256_blendv_pd(nextDestinationX, add1_rounded, mask_not_neg_one);
+				__m256d roundedYForValidAgents = _mm256_blendv_pd(nextDestinationY, add2_rounded, mask_not_neg_one);
+
+				// Step 5: Cast to int
+				
+
+				// Step 6: Check the blend results for -1
+
+				// Step 7: Replace the -1 with the agents x and y position 
+
+				const __m128i desiredPositionYNew
 
 				// set the desired position
 				agentsSimd->desiredPositionX[i] = desiredPositionXNew;
