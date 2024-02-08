@@ -47,26 +47,11 @@ namespace Ped {
 	void Model::tick()
 	{
 		if (this->implementation == IMPLEMENTATION::SEQ) {
-			for (auto i = 0u; i < agents.size(); i++) {
-				agents[i]->computeNextDesiredPosition();
-				if (i == 0) {
-					std::cout << "Agent 0: " << agents[i]->getX() << ", " << agents[i]->getY() << std::endl;
-					auto desiredX = agents[i]->getDesiredX();
-					auto desiredY = agents[i]->getDesiredY();
-					std::cout << "Desired: " << desiredX << ", " << desiredY << std::endl;
-
-					agents[i]->setX(desiredX);
-					agents[i]->setY(desiredY);
-				} else {
-					agents[i]->setX(agents[i]->getDesiredX());
-					agents[i]->setY(agents[i]->getDesiredY());
-				}
+			for (auto agent : this->getAgents()) {
+				agent->computeNextDesiredPosition();
+				agent->setX(agent->getDesiredX());
+				agent->setY(agent->getDesiredY());
 			}
-			// for (auto agent : this->getAgents()) {
-			// 	agent->computeNextDesiredPosition();
-			// 	agent->setX(agent->getDesiredX());
-			// 	agent->setY(agent->getDesiredY());
-			// }
 		} else if (this->implementation == IMPLEMENTATION::OMP) {
 			//omp_set_num_threads(8);
 			#pragma omp parallel for default (none)
@@ -103,8 +88,8 @@ namespace Ped {
 			__m256d* nextDestinationsY = (__m256d*)_mm_malloc(totalSize * sizeof(__m256d), 32);
 
 			for (auto i = 0u; i < totalAgents; i += SIMD_AGENTS_PER_TICK) {
-				double dataX[4] = {0, 0, 0, 0};
-				double dataY[4] = {0, 0, 0, 0};
+				double dataX[4] = {-1, -1, -1, -1};
+				double dataY[4] = {-1, -1, -1, -1};
 				
 				for (int j = 0; j < SIMD_AGENTS_PER_TICK; ++j) {
 					if (i + j >= totalAgents) {
@@ -113,14 +98,8 @@ namespace Ped {
 					auto waypoint = agents[i+j]->getNextDestination();
 					agents[i+j]->destination = waypoint;
 					if (waypoint != NULL) {
-						//std::cout << "Waypoint at index " << i + j << ": " << dataX[j] << ", " << dataY[j] << std::endl;
 						dataX[j] = waypoint->getx();
 						dataY[j] = waypoint->gety();							
-					}
-					else {
-						//std::cout << "Null at index " << i + j << std::endl;
-						dataX[j] = -1;
-						dataY[j] = -1;
 					}
 				}
 
@@ -138,7 +117,6 @@ namespace Ped {
 			const auto simdListSize = agentsSimd->x.size();
 			// for the last data vector this might perform some unnecessary calculations
 			// but this doesn't affect the actual program since we only extract all valid agents in the loop below this one
-			std::cout << "Simd list size: " << simdListSize << std::endl;
 			for (auto i = 0u; i < simdListSize; i++) {
 
 				// 1. store the results
@@ -197,15 +175,7 @@ namespace Ped {
 				// set x and y
 				agentsSimd->x[i] = desiredPositionXNew;
 				agentsSimd->y[i] = desiredPositionYNew;
-
-				if (i == 0) {
-					std::cout << "Agent 0: " << _mm_extract_epi32(agentsSimd->x[i], 0) << ", " << _mm_extract_epi32(agentsSimd->y[i], 0) << std::endl;
-				}
-
 			}
-
-			
-			std::cout << "Setting positions..." << std::endl;
 
 			// Set the agents' position
 			for (auto i = 0u; i < simdListSize; i++) {
