@@ -36,11 +36,11 @@ namespace Ped {
 
 		// Sets the agent's position
 		void setX(int newX) {
-			//std::cout << "Setting x to " << newX << std::endl;
+			std::cout << "Setting x to " << newX << std::endl;
 			x = newX;
 		}
 		void setY(int newY) {
-			//std::cout << "Setting y to " << newY << std::endl;
+			std::cout << "Setting y to " << newY << std::endl;
 			y = newY;
 		}
 
@@ -57,6 +57,9 @@ namespace Ped {
 
 		// Returns the next destination to visit
 		Twaypoint* getNextDestination();
+		
+		// The current destination (may require several steps to reach)
+		Twaypoint* destination;
 	private:
 		Tagent() {};
 
@@ -67,9 +70,6 @@ namespace Ped {
 		// The agent's desired next position
 		int desiredPositionX;
 		int desiredPositionY;
-
-		// The current destination (may require several steps to reach)
-		Twaypoint* destination;
 
 		// The last destination
 		Twaypoint* lastDestination;

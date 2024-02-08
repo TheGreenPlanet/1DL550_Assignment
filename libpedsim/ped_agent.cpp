@@ -33,7 +33,7 @@ void Ped::Tagent::init(int posX, int posY) {
 }
 
 void Ped::Tagent::computeNextDesiredPosition() {
-	destination = getNextDestination();
+	this->destination = getNextDestination();
 	if (destination == NULL) {
 		// no destination, no need to
 		// compute where to move to
@@ -55,7 +55,7 @@ Ped::Twaypoint* Ped::Tagent::getNextDestination() {
 	Ped::Twaypoint* nextDestination = NULL;
 	bool agentReachedDestination = false;
 
-	if (destination != NULL) {
+	if (this->destination != NULL) {
 		// compute if agent reached its current destination
 		double diffX = destination->getx() - x;
 		double diffY = destination->gety() - y;
@@ -63,7 +63,7 @@ Ped::Twaypoint* Ped::Tagent::getNextDestination() {
 		agentReachedDestination = length < destination->getr();
 	}
 
-	if ((agentReachedDestination || destination == NULL) && !waypoints.empty()) {
+	if ((agentReachedDestination || this->destination == NULL) && !waypoints.empty()) {
 		// Case 1: agent has reached destination (or has no current destination);
 		// get next destination if available
 		waypoints.push_back(destination);
@@ -73,7 +73,7 @@ Ped::Twaypoint* Ped::Tagent::getNextDestination() {
 	else {
 		// Case 2: agent has not yet reached destination, continue to move towards
 		// current destination
-		nextDestination = destination;
+		nextDestination = this->destination;
 	}
 
 	return nextDestination;

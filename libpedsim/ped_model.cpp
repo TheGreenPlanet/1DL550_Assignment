@@ -103,17 +103,24 @@ namespace Ped {
 			__m256d* nextDestinationsY = (__m256d*)_mm_malloc(totalSize * sizeof(__m256d), 32);
 
 			for (auto i = 0u; i < totalAgents; i += SIMD_AGENTS_PER_TICK) {
-				double dataX[4] = {-1, -1, -1, -1};
-				double dataY[4] = {-1, -1, -1, -1};
+				double dataX[4] = {0, 0, 0, 0};
+				double dataY[4] = {0, 0, 0, 0};
 				
 				for (int j = 0; j < SIMD_AGENTS_PER_TICK; ++j) {
 					if (i + j >= totalAgents) {
 						break;
 					}
 					auto waypoint = agents[i+j]->getNextDestination();
-					if (waypoint) {
+					agents[i+j]->destination = waypoint;
+					if (waypoint != NULL) {
+						//std::cout << "Waypoint at index " << i + j << ": " << dataX[j] << ", " << dataY[j] << std::endl;
 						dataX[j] = waypoint->getx();
 						dataY[j] = waypoint->gety();							
+					}
+					else {
+						//std::cout << "Null at index " << i + j << std::endl;
+						dataX[j] = -1;
+						dataY[j] = -1;
 					}
 				}
 
@@ -131,6 +138,7 @@ namespace Ped {
 			const auto simdListSize = agentsSimd->x.size();
 			// for the last data vector this might perform some unnecessary calculations
 			// but this doesn't affect the actual program since we only extract all valid agents in the loop below this one
+			std::cout << "Simd list size: " << simdListSize << std::endl;
 			for (auto i = 0u; i < simdListSize; i++) {
 
 				// 1. store the results
@@ -147,6 +155,7 @@ namespace Ped {
 				// we assume that the "index" in the vector for -1 is the same for both nextDestinationX and yAsDouble
 				// hence, only one mask calculation is needed and applied
 				const __m256d mask_not_neg_one = _mm256_cmp_pd(nextDestinationX, _mm256_set1_pd(-1.0), _CMP_NEQ_OQ);
+				const __m256d mask_neg_one = _mm256_cmp_pd(nextDestinationX, _mm256_set1_pd(-1.0), _CMP_EQ_OQ);
 				
 				// Step 3: Calculate the square of all elements.
 				// Compute the next desired position
@@ -159,30 +168,27 @@ namespace Ped {
 
 				const __m256d len = _mm256_sqrt_pd(add_pd);
 
-				const __m256d half = _mm256_set1_pd(0.5);
-
 				const __m256d divX = _mm256_div_pd(diffX, len);
 				const __m256d add1 = _mm256_add_pd(xAsDouble, divX);
 				// round like round
-				const __m256d add1_rounded = __mm256_round_pd(add1, _MM_FROUND_TO_NEAREST_INT);
+				const __m256d add1_rounded = _mm256_round_pd(add1, _MM_FROUND_TO_NEAREST_INT);
 
 				const __m256d divY = _mm256_div_pd(diffY, len);
 				const __m256d add2 = _mm256_add_pd(yAsDouble, divY);
 
-				const __m256d add2_rounded = __mm256_round_pd(add2, _MM_FROUND_TO_NEAREST_INT);
+				const __m256d add2_rounded = _mm256_round_pd(add2, _MM_FROUND_TO_NEAREST_INT);
 
 				// Step 4: Use the mask to blend: choose 'input' where mask is false (i.e., where input is -1), and 'squared' otherwise.
 				__m256d roundedXForValidAgents = _mm256_blendv_pd(nextDestinationX, add1_rounded, mask_not_neg_one);
 				__m256d roundedYForValidAgents = _mm256_blendv_pd(nextDestinationY, add2_rounded, mask_not_neg_one);
 
-				// Step 5: Cast to int
-				
+				// Step 5: Replace the -1 values with the original x and y
+				roundedXForValidAgents = _mm256_blendv_pd(roundedXForValidAgents, xAsDouble, mask_neg_one);
+				roundedYForValidAgents = _mm256_blendv_pd(roundedYForValidAgents, yAsDouble, mask_neg_one);
 
-				// Step 6: Check the blend results for -1
-
-				// Step 7: Replace the -1 with the agents x and y position 
-
-				const __m128i desiredPositionYNew
+				// Last step: Cast double to int
+				__m128i desiredPositionXNew = _mm256_cvtpd_epi32(roundedXForValidAgents);
+				__m128i desiredPositionYNew = _mm256_cvtpd_epi32(roundedYForValidAgents);
 
 				// set the desired position
 				agentsSimd->desiredPositionX[i] = desiredPositionXNew;
@@ -192,7 +198,14 @@ namespace Ped {
 				agentsSimd->x[i] = desiredPositionXNew;
 				agentsSimd->y[i] = desiredPositionYNew;
 
+				if (i == 0) {
+					std::cout << "Agent 0: " << _mm_extract_epi32(agentsSimd->x[i], 0) << ", " << _mm_extract_epi32(agentsSimd->y[i], 0) << std::endl;
+				}
+
 			}
+
+			
+			std::cout << "Setting positions..." << std::endl;
 
 			// Set the agents' position
 			for (auto i = 0u; i < simdListSize; i++) {
