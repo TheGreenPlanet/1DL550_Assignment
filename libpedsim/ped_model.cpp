@@ -103,26 +103,21 @@ namespace Ped {
 			__m256d* nextDestinationsY = (__m256d*)_mm_malloc(totalSize * sizeof(__m256d), 32);
 
 			for (auto i = 0u; i < totalAgents; i += SIMD_AGENTS_PER_TICK) {
-				auto lambda = [&](Twaypoint *waypoint, int agentIdx) -> std::pair<double, double> {
-						if (waypoint == NULL) {
-								//std::cout << "Agent " << agentIdx << " has no destination" << std::endl;
-								constexpr double SOME_BIG_NUMBER_THAT_DOESNT_OVERFLOW = cbrt(std::numeric_limits<double>::max());
-								return {SOME_BIG_NUMBER_THAT_DOESNT_OVERFLOW, SOME_BIG_NUMBER_THAT_DOESNT_OVERFLOW};    
-						}
-						//std::cout << "Agent " << agentIdx << " has destination, x = " << waypoint->getx() << ", y = " << waypoint->gety() << std::endl;
-						return {waypoint->getx(), waypoint->gety()};
-				};
-
 				double dataX[4] = {0.0, 0.0, 0.0, 0.0};
 				double dataY[4] = {0.0, 0.0, 0.0, 0.0};
 				
 				for (int j = 0; j < SIMD_AGENTS_PER_TICK; ++j) {
 						if (i + j >= totalAgents) {
-								break;
+							break;
 						}
-						auto result = lambda(agents[i+j]->getNextDestination(), i+j);
-						dataX[j] = result.first;
-						dataY[j] = result.second;
+						auto waypoint = agents[i+j]->getNextDestination();
+						if (waypoint) {
+							dataX[j] = waypoint->getx();
+							dataY[j] = waypoint->gety();							
+						} else {
+							dataX[j] = -1;
+							dataY[j] = -1;
+						}
 				}
 
 				__m256d fourNextDestinationsX = _mm256_loadu_pd(dataX);
@@ -140,6 +135,7 @@ namespace Ped {
 			// for the last data vector this might perform some unnecessary calculations
 			// but this doesn't affect the actual program since we only extract all valid agents in the loop below this one
 			for (auto i = 0u; i < simdListSize; i++) {
+
 				const __m128i x = agentsSimd->x.at(i);
 				const __m128i y = agentsSimd->y.at(i);
 				const __m256d nextDestinationX = nextDestinationsX[i];
@@ -171,14 +167,6 @@ namespace Ped {
 				const __m256d add2_adjusted = _mm256_add_pd(add2, half);
 				const __m128i desiredPositionYNew = _mm256_cvttpd_epi32(add2_adjusted);
 
-
-				if (i == 0) {
-					std::cout << "Desired position x: " << _mm_extract_epi32(desiredPositionXNew, 0) << std::endl;
-					std::cout << "Desired position y: " << _mm_extract_epi32(desiredPositionYNew, 0) << std::endl;
-				}
-
-				// std::cout << "Desired position x: " << _mm_extract_epi32(desiredPositionXNew, 0) << std::endl;
-				// std::cout << "Desired position y: " << _mm_extract_epi32(desiredPositionYNew, 0) << std::endl;
 
 				// set the desired position
 				agentsSimd->desiredPositionX[i] = desiredPositionXNew;
