@@ -106,10 +106,6 @@ namespace Ped {
 				this->agentsSimd->nextDestinationsY[i / SIMD_AGENTS_PER_TICK] = fourNextDestinationsY;
 			}
 
-			assert(agentsSimd->x.size() == agentsSimd->y.size());
-			assert(agentsSimd->x.size() == agentsSimd->desiredPositionX.size());
-			assert(agentsSimd->x.size() == agentsSimd->desiredPositionY.size());
-
 			const auto simdListSize = agentsSimd->x.size();
 			// for the last data vector this might perform some unnecessary calculations
 			// but this doesn't affect the actual program since we only extract all valid agents in the loop below this one
@@ -130,7 +126,7 @@ namespace Ped {
 				// hence, only one mask calculation is needed and applied
 				const __m256d mask_not_neg_one = _mm256_cmp_pd(nextDestinationX, _mm256_set1_pd(-1.0), _CMP_NEQ_OQ);
 				const __m256d mask_neg_one = _mm256_cmp_pd(nextDestinationX, _mm256_set1_pd(-1.0), _CMP_EQ_OQ);
-				
+
 				// Step 3: Calculate the square of all elements.
 				// Compute the next desired position
 				const __m256d diffX = _mm256_sub_pd(nextDestinationX, xAsDouble);
@@ -175,21 +171,18 @@ namespace Ped {
 
 			// Set the agents' position
 			for (auto i = 0u; i < simdListSize; i++) {
-				if (i * SIMD_AGENTS_PER_TICK < totalAgents) {
-					agents[i * SIMD_AGENTS_PER_TICK]->setX(_mm_extract_epi32(agentsSimd->desiredPositionX[i], 0));
-					agents[i * SIMD_AGENTS_PER_TICK]->setY(_mm_extract_epi32(agentsSimd->desiredPositionY[i], 0));
-				}
-				if ((i * SIMD_AGENTS_PER_TICK + 1) < totalAgents) {
-					agents[i * SIMD_AGENTS_PER_TICK + 1]->setX(_mm_extract_epi32(agentsSimd->desiredPositionX[i], 1));
-					agents[i * SIMD_AGENTS_PER_TICK + 1]->setY(_mm_extract_epi32(agentsSimd->desiredPositionY[i], 1));
-				}
-				if ((i * SIMD_AGENTS_PER_TICK + 2) < totalAgents) {
-					agents[i * SIMD_AGENTS_PER_TICK + 2]->setX(_mm_extract_epi32(agentsSimd->desiredPositionX[i], 2));
-					agents[i * SIMD_AGENTS_PER_TICK + 2]->setY(_mm_extract_epi32(agentsSimd->desiredPositionY[i], 2));
-				}
-				if ((i * SIMD_AGENTS_PER_TICK + 3) < totalAgents) {
-					agents[i * SIMD_AGENTS_PER_TICK + 3]->setX(_mm_extract_epi32(agentsSimd->desiredPositionX[i], 3));
-					agents[i * SIMD_AGENTS_PER_TICK + 3]->setY(_mm_extract_epi32(agentsSimd->desiredPositionY[i], 3));
+				int xVals[SIMD_AGENTS_PER_TICK];
+				int yVals[SIMD_AGENTS_PER_TICK];
+
+				_mm_storeu_si128((__m128i*)xVals, agentsSimd->x[i]);
+				_mm_storeu_si128((__m128i*)yVals, agentsSimd->y[i]);
+
+				for (int j = 0; j < SIMD_AGENTS_PER_TICK; ++j) {
+					if (i * SIMD_AGENTS_PER_TICK + j >= agents.size()) {
+						break;
+					}
+					agents[i * SIMD_AGENTS_PER_TICK + j]->setX(xVals[j]);
+					agents[i * SIMD_AGENTS_PER_TICK + j]->setY(yVals[j]);
 				}
 			}
 		}
