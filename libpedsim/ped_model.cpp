@@ -190,11 +190,20 @@ namespace Ped {
 			}
 
 		} else if (this->implementation == IMPLEMENTATION::MOVE) {
-			for (auto id = 0u; id<4; id++) {
-				for (auto agent : this->world->getRegion(id)->agents) {
-					agent->computeNextDesiredPosition();
-					move(agent);
-				}
+			int numThreads = 4;
+			std::vector<std::thread> threads(numThreads);
+			
+			for (int t = 0; t < numThreads; t++) {
+				threads[t] = std::thread([this, t]() {
+					for (auto agent : this->world->getRegion(t)->agents) {
+						agent->computeNextDesiredPosition();
+						this->move(agent);
+					}
+				});
+			}
+
+			for (auto &thread : threads) {
+				thread.join();
 			}
 		}
 	}
