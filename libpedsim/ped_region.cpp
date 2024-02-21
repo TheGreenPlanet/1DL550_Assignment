@@ -20,13 +20,14 @@ namespace Ped
         this->mutex.unlock();
     }
 
-    void Region::addAgent(const Tagent *agent) {
+    void Region::addAgent(Tagent *agent) {
         this->lockRegion();
         this->agents.push_back(agent);
+        agent->setRegionId(this->id);
         this->unlockRegion();        
     }
 
-    void Region::removeAgent(const Tagent *agent) {
+    void Region::removeAgent(Tagent *agent) {
         this->lockRegion();
         // TODO: optimize
         for (auto it = this->agents.begin(); it != this->agents.end(); ++it) {
@@ -35,6 +36,7 @@ namespace Ped
                 break;
             }
         }
+        agent->setRegionId(-1);
         this->unlockRegion();
     }
 };

@@ -41,6 +41,11 @@ namespace Ped {
 		void setY(int newY) {
 			y = newY;
 		}
+		void setRegionId(const int id) {
+			this->regionId = id;
+		}
+
+		int regionId = -1;
 
 		// Update the position according to get closer
 		// to the current destination
@@ -74,6 +79,7 @@ namespace Ped {
 
 		// The queue of all destinations that this agent still has to visit
 		deque<Twaypoint*> waypoints;
+
 
 		// Internal init function 
 		void init(int posX, int posY);

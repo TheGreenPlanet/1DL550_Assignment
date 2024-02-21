@@ -190,13 +190,11 @@ namespace Ped {
 			}
 
 		} else if (this->implementation == IMPLEMENTATION::MOVE) {
-			
-
-			for (auto agent : this->getAgents()) {
-				agent->computeNextDesiredPosition();
-				// agent->setX(agent->getDesiredX());
-				// agent->setY(agent->getDesiredY());
-				move(agent);
+			for (auto id = 0u; id<4; id++) {
+				for (auto agent : this->world->getRegion(id)->agents) {
+					agent->computeNextDesiredPosition();
+					move(agent);
+				}
 			}
 		}
 	}
@@ -249,10 +247,20 @@ namespace Ped {
 			// If the current position is not yet taken by any neighbor
 			if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
 
+				if (!this->world->getRegion(agent->regionId)->contains(agent)) {
+					this->world->getRegion(agent->regionId)->removeAgent(agent);
+
+					for (auto id = 0u; id<4; id++) {
+						if (this->world->getRegion(id)->contains(agent)) {
+							this->world->getRegion(id)->addAgent(agent);
+							break;
+						}
+					}
+				}
+
 				// Set the agent's position 
 				agent->setX((*it).first);
 				agent->setY((*it).second);
-
 				break;
 			}
 		}

@@ -30,11 +30,11 @@ namespace Ped {
         void lockRegion();
         void unlockRegion();
 
-        void addAgent(const Tagent* agent);
-        void removeAgent(const Tagent* agent);
+        void addAgent(Tagent* agent);
+        void removeAgent(Tagent* agent);
 
+        std::vector<Tagent*> agents;
     private:        
-        std::vector<const Tagent*> agents;
         std::mutex mutex;
         Bound bound;
     };
