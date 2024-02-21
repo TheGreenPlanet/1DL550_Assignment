@@ -66,6 +66,10 @@ int main(int argc, char*argv[]) {
 			{
 				implementation_to_test = Ped::VECTOR;
 			}
+			else if (strcmp(&argv[i][2], "move") == 0)
+			{
+				implementation_to_test = Ped::MOVE;
+			}
 			// TODO: add all implementations
 			else
 			{
@@ -92,6 +96,9 @@ int main(int argc, char*argv[]) {
 			break;
 		case Ped::VECTOR:
 			cout << "Testing VECTOR implementation" << endl;
+			break;
+		case Ped::MOVE:
+			cout << "Testing MOVE implementation" << endl;
 			break;
 	}
 

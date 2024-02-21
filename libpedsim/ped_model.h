@@ -18,13 +18,15 @@
 
 #include "ped_agent.h"
 #include "ped_agent_simd.h"
+#include "ped_world.h"
+
 
 namespace Ped{
 	class Tagent;
 
 	// The implementation modes for Assignment 1 + 2:
 	// chooses which implementation to use for tick()
-	enum IMPLEMENTATION { CUDA, VECTOR, OMP, PTHREAD, SEQ };
+	enum IMPLEMENTATION { CUDA, VECTOR, OMP, PTHREAD, SEQ, MOVE };
 
 	class Model
 	{
@@ -65,6 +67,9 @@ namespace Ped{
 
 		// The waypoints in this scenario
 		std::vector<Twaypoint*> destinations;
+
+		// The world
+		std::unique_ptr<Ped::World> world;
 
 		// Moves an agent towards its next position
 		void move(Ped::Tagent *agent);

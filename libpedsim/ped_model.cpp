@@ -21,6 +21,7 @@
 #include "ped_model.h"
 #include "cuda_testkernel.h"
 
+
 namespace Ped {
 	constexpr uint32_t SIMD_AGENTS_PER_TICK = 4;
 
@@ -39,6 +40,8 @@ namespace Ped {
 
 		// Sets the chosen implemenation. Standard in the given code is SEQ
 		this->implementation = implementation;
+
+		world = std::make_unique<Ped::World>(agentsInScenario);
 
 		// Set up heatmap (relevant for Assignment 4)
 		setupHeatmapSeq();
@@ -184,6 +187,16 @@ namespace Ped {
 					agents[i * SIMD_AGENTS_PER_TICK + j]->setX(xVals[j]);
 					agents[i * SIMD_AGENTS_PER_TICK + j]->setY(yVals[j]);
 				}
+			}
+
+		} else if (this->implementation == IMPLEMENTATION::MOVE) {
+			
+
+			for (auto agent : this->getAgents()) {
+				agent->computeNextDesiredPosition();
+				// agent->setX(agent->getDesiredX());
+				// agent->setY(agent->getDesiredY());
+				move(agent);
 			}
 		}
 	}
