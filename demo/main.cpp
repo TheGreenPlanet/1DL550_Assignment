@@ -66,6 +66,10 @@ int main(int argc, char*argv[]) {
 			{
 				implementation_to_test = Ped::VECTOR;
 			}
+			else if (strcmp(&argv[i][2], "seqmove") == 0)
+			{
+				implementation_to_test = Ped::SEQMOVE;
+			}
 			else if (strcmp(&argv[i][2], "move") == 0)
 			{
 				implementation_to_test = Ped::MOVE;
@@ -97,6 +101,9 @@ int main(int argc, char*argv[]) {
 		case Ped::VECTOR:
 			cout << "Testing VECTOR implementation" << endl;
 			break;
+		case Ped::SEQMOVE:
+			cout << "Testing SEQMOVE implementation" << endl;
+			break;
 		case Ped::MOVE:
 			cout << "Testing MOVE implementation" << endl;
 			break;
@@ -111,7 +118,7 @@ int main(int argc, char*argv[]) {
 		model.setup(parser.getAgents(), parser.getWaypoints(), implementation_to_test);
 
 		// Default number of steps to simulate. Feel free to change this.
-		const int maxNumberOfStepsToSimulate = 100000;
+		const int maxNumberOfStepsToSimulate = 1000;
 		
 				
 
@@ -127,7 +134,7 @@ int main(int argc, char*argv[]) {
 			{
 				Ped::Model model;
 				ParseScenario parser(scenefile);
-				model.setup(parser.getAgents(), parser.getWaypoints(), Ped::SEQ);
+				model.setup(parser.getAgents(), parser.getWaypoints(), Ped::SEQMOVE);
 				PedSimulation simulation(model, NULL, timing_mode);
 				// Simulation mode to use when profiling (without any GUI)
 				std::cout << "Running reference version...\n";

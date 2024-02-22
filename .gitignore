@@ -40,3 +40,7 @@
 
 # binary file
 demo/demo
+
+*.txt
+*.out
+*.dot

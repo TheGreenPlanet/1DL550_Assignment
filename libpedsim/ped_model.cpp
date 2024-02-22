@@ -189,6 +189,13 @@ namespace Ped {
 				}
 			}
 
+		} else if (this->implementation == IMPLEMENTATION::SEQMOVE) {
+			for (int i = 0; i < 4; i++) {
+				for (auto agent : this->world->getRegion(i)->agents) {
+					agent->computeNextDesiredPosition();
+					this->move(agent);
+				}
+			}
 		} else if (this->implementation == IMPLEMENTATION::MOVE) {
 			int numThreads = 4;
 			std::vector<std::thread> threads(numThreads);
