@@ -20,6 +20,9 @@
 #include "ped_agent_simd.h"
 #include "ped_world.h"
 
+constexpr std::size_t HEATMAP_SIDE_LEN = 1024;
+constexpr std::size_t HEATMAP_CELLSIZE = 5;
+constexpr std::size_t HEATMAP_SCALED_SIDE_LEN = HEATMAP_SIDE_LEN * HEATMAP_CELLSIZE;
 
 namespace Ped{
 	class Tagent;
@@ -85,9 +88,7 @@ namespace Ped{
 		/// Everything below here won't be relevant until Assignment 4
 		///////////////////////////////////////////////
 
-#define SIZE 1024
-#define CELLSIZE 5
-#define SCALED_SIZE SIZE*CELLSIZE
+
 
 		// The heatmap representing the density of agents
 		int ** heatmap;
@@ -98,8 +99,14 @@ namespace Ped{
 		// The final heatmap: blurred and scaled to fit the view
 		int ** blurred_heatmap;
 
-		void setupHeatmapSeq();
-		void updateHeatmapSeq();
+
+		int *linear_heatmap;
+		int *linear_scaled_heatmap;
+		int *linear_blurred_heatmnap;
+
+		void initializeHeatmaps();
+		void processHeatmapUpdates();
+		void updateHeatmapCUDA();
 	};
 }
 #endif

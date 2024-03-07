@@ -44,7 +44,7 @@ namespace Ped {
 		world = std::make_unique<Ped::World>(agentsInScenario);
 
 		// Set up heatmap (relevant for Assignment 4)
-		setupHeatmapSeq();
+		initializeHeatmaps();
 	}
 
 	void Model::tick()
@@ -213,7 +213,7 @@ namespace Ped {
 				thread.join();
 			}
 		}
-		this->updateHeatmap();
+		this->processHeatmapUpdates();
 	}
 
 	////////////
