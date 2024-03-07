@@ -213,6 +213,7 @@ namespace Ped {
 				thread.join();
 			}
 		}
+		this->updateHeatmap();
 	}
 
 	////////////
