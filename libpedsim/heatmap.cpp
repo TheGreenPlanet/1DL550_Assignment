@@ -1,4 +1,5 @@
 #include "ped_model.h"
+#include "chrono"
 #include "cuda_runtime.h"
 #include "heatmap.cuh"
 #include "device_launch_parameters.h"
@@ -17,7 +18,11 @@ int Ped::Model::getHeatmapSize() const {
 
 void Ped::Model::processHeatmapUpdates() {
     // Fade heatmap by reducing its intensity
+	//auto start = std::chrono::high_resolution_clock::now();
 	fadeHeatmap(linear_heatmap);
+	//auto end = std::chrono::high_resolution_clock::now();
+	//auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	//std::cout << "Heat intensity update time: " << elapsed.count() << "ms" << std::endl;
 
     // Prepare for heat intensity update based on agent positions
 	std::vector<int> x(agents.size()), y(agents.size());
@@ -29,14 +34,32 @@ void Ped::Model::processHeatmapUpdates() {
 		y[i] = agent->getDesiredY();
 	}
 
-    // Update heat intensity based on agent positions
+	//auto start = std::chrono::high_resolution_clock::now();
+	// Update heatmap intensity based on agent positions
 	updateHeatIntensity(linear_heatmap, &x[0], &y[0], agents.size());
-    // Set maximum heat values where agents are located
+	//auto end = std::chrono::high_resolution_clock::now();
+	//auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	//std::cout << "Heat intensity update time: " << elapsed.count() << "ms" << std::endl;
+
+	// Update scaled heatmap and blurred heatmap based on linear heatmap
+
+	//start = std::chrono::high_resolution_clock::now();
 	setMaxHeat(linear_heatmap);
-    // Update scaled heatmap based on original heatmap
+	//end = std::chrono::high_resolution_clock::now();
+	//elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	//std::cout << "Set max heat time: " << elapsed.count() << "ms" << std::endl;
+
+	//start = std::chrono::high_resolution_clock::now();
 	updateScaledHeatmap(linear_heatmap, linear_scaled_heatmap);
-    // Apply blurring effect to scaled heatmap
+	//end = std::chrono::high_resolution_clock::now();
+	//elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	//std::cout << "Update scaled heatmap time: " << elapsed.count() << "ms" << std::endl;
+
+	//start = std::chrono::high_resolution_clock::now();
 	updateBlurredHeatmap(linear_scaled_heatmap, linear_blurred_heatmnap);
+	//end = std::chrono::high_resolution_clock::now();
+	//elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	//std::cout << "Update blurred heatmap time: " << elapsed.count() << "ms" << std::endl;
 
     // Wait for all CUDA operations to complete
 	cudaDeviceSynchronize();

@@ -24,19 +24,24 @@ constexpr std::size_t HEATMAP_SIDE_LEN = 1024;
 constexpr std::size_t HEATMAP_CELLSIZE = 5;
 constexpr std::size_t HEATMAP_SCALED_SIDE_LEN = HEATMAP_SIDE_LEN * HEATMAP_CELLSIZE;
 
+constexpr std::size_t SIZE = 1024;
+constexpr std::size_t CELLSIZE = 5;
+constexpr std::size_t SCALED_SIZE = SIZE * CELLSIZE;
+
 namespace Ped{
 	class Tagent;
 
 	// The implementation modes for Assignment 1 + 2:
 	// chooses which implementation to use for tick()
 	enum IMPLEMENTATION { CUDA, VECTOR, OMP, PTHREAD, SEQ, SEQMOVE, MOVE };
+	enum HEATMAP_IMPLEMENTATION { H_SEQ, H_CUDA };
 
 	class Model
 	{
 	public:
 
 		// Sets everything up
-		void setup(std::vector<Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario,IMPLEMENTATION implementation);
+		void setup(std::vector<Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario,IMPLEMENTATION implementation, HEATMAP_IMPLEMENTATION heatmap_implementation);
 		// Coordinates a time step in the scenario: move all agents by one step (if applicable).
 		void tick();
 
@@ -54,6 +59,9 @@ namespace Ped{
 		int const * const * getHeatmap() const { return blurred_heatmap; };
 		int getHeatmapSize() const;
 
+		void setupHeatmapSeq();
+		void updateHeatmapSeq();
+
 	private:
 
 
@@ -61,6 +69,8 @@ namespace Ped{
 		// should be used for calculating the desired positions of
 		// agents (Assignment 1)
 		IMPLEMENTATION implementation;
+		
+		HEATMAP_IMPLEMENTATION heatmap_implementation;
 
 		// The agents in this scenario
 		std::vector<Tagent*> agents;

@@ -25,7 +25,7 @@
 namespace Ped {
 	constexpr uint32_t SIMD_AGENTS_PER_TICK = 4;
 
-	void Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
+	void Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, HEATMAP_IMPLEMENTATION heatmap_implementation)
 	{
 		// Convenience test: does CUDA work on this machine?
 		cuda_test();
@@ -40,11 +40,16 @@ namespace Ped {
 
 		// Sets the chosen implemenation. Standard in the given code is SEQ
 		this->implementation = implementation;
+		this->heatmap_implementation = heatmap_implementation;
 
 		world = std::make_unique<Ped::World>(agentsInScenario);
 
 		// Set up heatmap (relevant for Assignment 4)
-		initializeHeatmaps();
+		if (this->heatmap_implementation == Ped::H_SEQ) {
+			setupHeatmapSeq();
+		} else if (this->heatmap_implementation == Ped::H_CUDA) {
+			initializeHeatmaps();
+		}
 	}
 
 	void Model::tick()
@@ -213,7 +218,11 @@ namespace Ped {
 				thread.join();
 			}
 		}
-		this->processHeatmapUpdates();
+		if (this->heatmap_implementation == Ped::H_SEQ) {
+			this->updateHeatmapSeq();
+		} else if (this->heatmap_implementation == Ped::H_CUDA) {
+			this->processHeatmapUpdates();
+		}
 	}
 
 	////////////

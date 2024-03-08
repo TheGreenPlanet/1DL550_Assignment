@@ -34,6 +34,7 @@ int main(int argc, char*argv[]) {
 	int i = 1;
 	QString scenefile = "scenario.xml";
 	Ped::IMPLEMENTATION implementation_to_test = Ped::SEQ;
+	Ped::HEATMAP_IMPLEMENTATION heatmap_implementation = Ped::H_SEQ;
 
 	// Argument handling
 	while (i < argc)
@@ -74,6 +75,10 @@ int main(int argc, char*argv[]) {
 			{
 				implementation_to_test = Ped::MOVE;
 			}
+			else if (strcmp(&argv[i][2], "heatmap-cuda") == 0)
+			{
+				heatmap_implementation = Ped::H_CUDA;
+			}
 			// TODO: add all implementations
 			else
 			{
@@ -89,7 +94,7 @@ int main(int argc, char*argv[]) {
 	}
 
 	switch (implementation_to_test) {
-		case Ped::SEQ:
+		case Ped::IMPLEMENTATION::SEQ:
 			cout << "Testing SEQ implementation" << endl;
 			break;
 		case Ped::OMP:
@@ -109,16 +114,25 @@ int main(int argc, char*argv[]) {
 			break;
 	}
 
+	switch (heatmap_implementation) {
+		case Ped::H_SEQ:
+			cout << "Testing SEQ heatmap implementation" << endl;
+			break;
+		case Ped::H_CUDA:
+			cout << "Testing CUDA heatmap implementation" << endl;
+			break;
+	}
+
 	int retval = 0;
 	{ // This scope is for the purpose of removing false memory leak positives
 
 		// Reading the scenario file and setting up the crowd simulation model
 		Ped::Model model;
 		ParseScenario parser(scenefile);
-		model.setup(parser.getAgents(), parser.getWaypoints(), implementation_to_test);
+		model.setup(parser.getAgents(), parser.getWaypoints(), implementation_to_test, heatmap_implementation);
 
 		// Default number of steps to simulate. Feel free to change this.
-		const int maxNumberOfStepsToSimulate = 1000;
+		const int maxNumberOfStepsToSimulate = 30;
 		
 				
 
@@ -134,7 +148,7 @@ int main(int argc, char*argv[]) {
 			{
 				Ped::Model model;
 				ParseScenario parser(scenefile);
-				model.setup(parser.getAgents(), parser.getWaypoints(), Ped::SEQMOVE);
+				model.setup(parser.getAgents(), parser.getWaypoints(), Ped::MOVE, Ped::H_SEQ);
 				PedSimulation simulation(model, NULL, timing_mode);
 				// Simulation mode to use when profiling (without any GUI)
 				std::cout << "Running reference version...\n";
@@ -148,7 +162,7 @@ int main(int argc, char*argv[]) {
 			{
 				Ped::Model model;
 				ParseScenario parser(scenefile);
-				model.setup(parser.getAgents(), parser.getWaypoints(), implementation_to_test);
+				model.setup(parser.getAgents(), parser.getWaypoints(), implementation_to_test, heatmap_implementation);
 				PedSimulation simulation(model, NULL, timing_mode);
 				// Simulation mode to use when profiling (without any GUI)
 				std::cout << "Running target version...\n";
